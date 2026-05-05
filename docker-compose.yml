@@ -80,12 +80,30 @@ services:
           --replication-factor 1 &&
         echo 'Topic taxi-rides ready.'
 
+  # ── Iceberg catalog persistence (Postgres backend) ──────────────────────────
+  iceberg-db:
+    image: postgres:16-alpine
+    container_name: iceberg-db
+    environment:
+      POSTGRES_USER: iceberg
+      POSTGRES_PASSWORD: iceberg
+      POSTGRES_DB: iceberg
+    volumes:
+      - iceberg-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iceberg"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   # ── Iceberg REST catalog ─────────────────────────────────────────────────────
   iceberg-rest:
     image: tabulario/iceberg-rest:0.10.0
     container_name: iceberg-rest
     depends_on:
       minio:
+        condition: service_healthy
+      iceberg-db:
         condition: service_healthy
     environment:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
@@ -95,6 +113,10 @@ services:
       CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
       CATALOG_S3_ENDPOINT: http://minio:9000
       CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      CATALOG_CATALOG__IMPL: org.apache.iceberg.jdbc.JdbcCatalog
+      CATALOG_URI: jdbc:postgresql://iceberg-db:5432/iceberg
+      CATALOG_JDBC_USER: iceberg
+      CATALOG_JDBC_PASSWORD: iceberg
     ports:
       - "8181:8181"
     healthcheck:
@@ -233,4 +255,5 @@ services:
 volumes:
   minio-data:
   kafka-data:
+  iceberg-db-data:
   metabase-data:
