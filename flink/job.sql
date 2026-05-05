@@ -34,8 +34,8 @@ CREATE CATALOG iceberg_catalog WITH (
   'io-impl'                 = 'org.apache.iceberg.aws.s3.S3FileIO',
   's3.endpoint'             = 'http://minio:9000',
   's3.path-style-access'    = 'true',
-  's3.access-key-id'        = 'minioadmin',
-  's3.secret-access-key'    = 'minioadmin',
+  's3.access-key-id'        = '${AWS_ACCESS_KEY_ID}',
+  's3.secret-access-key'    = '${AWS_SECRET_ACCESS_KEY}',
   's3.region'               = 'us-east-1'
 );
 

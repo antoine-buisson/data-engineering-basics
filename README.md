@@ -35,54 +35,62 @@ Metabase  (dashboards)
 | Catalog | Iceberg REST catalog |
 | Object storage | MinIO |
 | Query engine | Trino 446 |
-| BI tool | Metabase v0.50 |
+| BI tool | Metabase |
 
 ## Quick start
+
+**1. Configure credentials**
+
+```bash
+cp .env.example .env
+# Edit .env if you want to change the default passwords
+```
+
+**2. Start the stack**
 
 ```bash
 docker compose up -d
 ```
 
-All services start in the correct order via healthcheck dependencies.  
-First startup downloads Flink connector JARs — allow a few minutes.
+All services start in the correct dependency order via Docker healthchecks.  
+The first run downloads Flink connector JARs (~200 MB) — allow a few minutes.
+
+**3. Open the dashboard**
+
+Once `metabase-init` completes (watch with `docker compose logs -f metabase-init`):
+
+- **Metabase dashboard** → http://localhost:3000/dashboard/2  
+  Login: values from `MB_ADMIN_EMAIL` / `MB_ADMIN_PASSWORD` in `.env`
+
+## Other endpoints
+
+| Service | URL | Credentials |
+|---|---|---|
+| Metabase | http://localhost:3000 | see `.env` |
+| Flink UI | http://localhost:8081 | — |
+| MinIO console | http://localhost:9001 | `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` from `.env` |
+| Trino | http://localhost:8080 | — |
 
 ## Verify the pipeline
 
 ```bash
-# Watch ride events being produced
+# Watch ride events being produced (~2/s)
 docker compose logs -f generator
 
 # Peek at raw Kafka messages
-docker compose exec kafka kafka-console-consumer.sh \
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server localhost:9092 \
   --topic taxi-rides \
   --from-beginning \
   --max-messages 5
 
-# Check Flink job status
-open http://localhost:8081
-
-# Browse Iceberg files in MinIO
-open http://localhost:9001   # user: minioadmin / minioadmin
-
-# Query with Trino
-docker compose exec trino trino --catalog iceberg --schema demo
-> SELECT status, count(*) AS rides, round(avg(fare_usd), 2) AS avg_fare
-  FROM rides GROUP BY status;
-
-# Open Metabase dashboard
-open http://localhost:3000
+# Query Iceberg directly via Trino
+docker compose exec trino trino --catalog iceberg --schema demo \
+  --execute "SELECT status, count(*) AS rides, round(avg(fare_usd),2) AS avg_fare FROM rides GROUP BY status;"
 ```
-
-## Metabase setup (first time)
-
-1. Open http://localhost:3000 and complete the onboarding wizard.
-2. Add a database → choose **Trino** (or **Starburst**).
-3. Host: `trino`, Port: `8080`, Catalog: `iceberg`, Schema: `demo`.
-4. Build questions / dashboards on the `rides` table.
 
 ## Tear down
 
 ```bash
-docker compose down -v   # -v removes named volumes (MinIO data, Kafka data)
+docker compose down -v   # -v also removes MinIO/Kafka/Metabase data volumes
 ```

@@ -10,6 +10,7 @@ done
 echo "JobManager is up."
 
 echo "Submitting Flink SQL job..."
-/opt/flink/bin/sql-client.sh -f /opt/flink/job.sql
+envsubst < /opt/flink/job.sql > /tmp/job-resolved.sql
+/opt/flink/bin/sql-client.sh -f /tmp/job-resolved.sql
 
 echo "Job submitted successfully."

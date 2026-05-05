@@ -8,7 +8,12 @@ import time
 import urllib.error
 import urllib.request
 
+import os
+
 BASE = "http://metabase:3000"
+
+ADMIN_EMAIL    = os.environ["MB_ADMIN_EMAIL"]
+ADMIN_PASSWORD = os.environ["MB_ADMIN_PASSWORD"]
 
 
 def api(method, path, body=None, session=None):
@@ -59,10 +64,10 @@ def main():
         api("POST", "/api/setup", {
             "token": token,
             "user": {
-                "first_name": "Demo",
-                "last_name": "Admin",
-                "email": "admin@demo.com",
-                "password": "Admin1234!",
+                "first_name": "Admin",
+                "last_name": "Demo",
+                "email": ADMIN_EMAIL,
+                "password": ADMIN_PASSWORD,
             },
             "prefs": {"site_name": "Data Engineering Demo", "allow_tracking": False},
         })
@@ -70,7 +75,7 @@ def main():
     else:
         print("Setup already done, skipping.")
 
-    session = get_session("admin@demo.com", "Admin1234!")
+    session = get_session(ADMIN_EMAIL, ADMIN_PASSWORD)
     print(f"  Logged in.")
 
     # ── 2. Add Trino datasource (skip if already present) ────────────────────
@@ -174,7 +179,7 @@ def main():
     result = api("PUT", f"/api/dashboard/{dash_id}", {"dashcards": dashcards}, session=session)
     print(f"  Dashboard id={dash_id} created with {len(result.get('dashcards', []))} cards.")
     print(f"\nDone! Open http://localhost:3000/dashboard/{dash_id}#refresh=30")
-    print("Login: admin@demo.com / Admin1234!")
+    print(f"Login: {ADMIN_EMAIL} / {ADMIN_PASSWORD}")
 
 
 if __name__ == "__main__":
