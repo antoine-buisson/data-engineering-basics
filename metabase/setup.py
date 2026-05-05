@@ -86,7 +86,7 @@ def main():
         print(f"Trino datasource already exists (id={db_id}), skipping.")
     else:
         print("Creating Trino datasource...")
-        db = api("POST", "/api/database", {
+        db_payload = {
             "engine": "starburst",
             "name": "Trino (Iceberg)",
             "details": {
@@ -97,7 +97,19 @@ def main():
                 "user": "admin",
                 "ssl": False,
             },
-        }, session=session)
+        }
+        # Metabase validates the connection immediately; retry if Trino is still warming up
+        db = None
+        for attempt in range(12):
+            try:
+                db = api("POST", "/api/database", db_payload, session=session)
+                break
+            except Exception as exc:
+                print(f"  Trino not ready yet ({exc}), retrying in 10s...")
+                time.sleep(10)
+        if db is None:
+            print("ERROR: could not create Trino datasource after retries.")
+            sys.exit(1)
         db_id = db["id"]
         print(f"  Created database id={db_id}")
 
@@ -105,13 +117,16 @@ def main():
     api("POST", f"/api/database/{db_id}/sync_schema", session=session)
     print("Waiting for 'rides' table to sync...")
     table_id = None
-    for _ in range(30):
+    for attempt in range(60):
         tables = api("GET", "/api/table", session=session)
-        for t in (tables if isinstance(tables, list) else []):
+        table_list = tables if isinstance(tables, list) else []
+        for t in table_list:
             if t.get("name") == "rides" and t.get("db_id") == db_id:
                 if t.get("initial_sync_status") == "complete":
                     table_id = t["id"]
                     break
+                elif attempt > 0 and attempt % 10 == 0:
+                    api("POST", f"/api/database/{db_id}/sync_schema", session=session)
         if table_id:
             break
         time.sleep(5)
