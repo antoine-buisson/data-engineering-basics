@@ -6,9 +6,6 @@ import uuid
 from datetime import datetime, timezone
 
 from confluent_kafka import Producer
-from faker import Faker
-
-fake = Faker()
 
 BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 TOPIC = os.environ.get("KAFKA_TOPIC", "taxi-rides")

@@ -98,6 +98,7 @@ services:
     ports:
       - "8181:8181"
     healthcheck:
+      # curl is not present in this image — use bash /dev/tcp instead
       test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8181 && echo -e \"GET /v1/config HTTP/1.0\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q 200'"]
       interval: 10s
       timeout: 5s
@@ -203,9 +204,24 @@ services:
       - "3000:3000"
     environment:
       MB_DB_TYPE: h2
+      MB_DB_FILE: /metabase-data/metabase.db
     volumes:
       - metabase-data:/metabase-data
     depends_on:
+      trino:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  metabase-init:
+    build: ./metabase
+    container_name: metabase-init
+    depends_on:
+      metabase:
+        condition: service_healthy
       trino:
         condition: service_healthy
 

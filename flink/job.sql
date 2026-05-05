@@ -21,7 +21,7 @@ CREATE TABLE kafka_rides (
   'topic'                        = 'taxi-rides',
   'properties.bootstrap.servers' = 'kafka:9092',
   'properties.group.id'          = 'flink-iceberg-consumer',
-  'scan.startup.mode'            = 'latest-offset',
+  'scan.startup.mode'            = 'earliest-offset',
   'format'                       = 'json'
 );
 
